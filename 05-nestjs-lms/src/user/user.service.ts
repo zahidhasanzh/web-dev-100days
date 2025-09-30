@@ -1,0 +1,36 @@
+import { ConflictException, Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { RegisterDto } from 'src/auth/dto/registerUser.dto';
+import { User } from './schemas/user.schema';
+import { Model } from 'mongoose';
+
+@Injectable()
+export class UserService {
+  constructor(@InjectModel(User.name) private userModel: Model<User>) {}
+  async createUser(registerUserDto: RegisterDto) {
+    try {
+      return await this.userModel.create({
+        fname: registerUserDto.fname,
+        lname: registerUserDto.lname,
+        email: registerUserDto.email,
+        password: registerUserDto.password,
+      });
+    } catch (err: unknown) {
+      console.log(err);
+      const e = err as { code?: number };
+      const DUPLICATE_KEY_CODE = 11000;
+      if (e.code === DUPLICATE_KEY_CODE) {
+        throw new ConflictException('Email is already taken.');
+      }
+      throw err;
+    }
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email }).exec();
+  }
+
+  async getUserById(id: string) {
+    return await this.userModel.findOne({ _id: id });
+  }
+}
